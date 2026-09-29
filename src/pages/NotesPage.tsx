@@ -1,5 +1,6 @@
 import { Pin, Plus, Search, Trash2 } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { createNote, deleteNote, listNotes, updateNote, type Note } from '../lib/notes'
 import { listProjects, listTasks, type Project, type Task } from '../lib/productivity'
@@ -7,6 +8,7 @@ import '../styles/pagePolish.css'
 
 export function NotesPage() {
   const { session } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [notes, setNotes] = useState<Note[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
@@ -26,6 +28,18 @@ export function NotesPage() {
   }
 
   useEffect(() => { void reload() }, [session?.user.id])
+  useEffect(() => {
+    const openId = searchParams.get('open')
+    if (!openId || !notes.length) return
+    const match = notes.find(note => note.id === openId)
+    if (match) {
+      setSelected(match)
+      setSaved(false)
+    }
+    const next = new URLSearchParams(searchParams)
+    next.delete('open')
+    setSearchParams(next, { replace: true })
+  }, [notes, searchParams, setSearchParams])
 
   const visibleNotes = useMemo(() => {
     const query = search.trim().toLowerCase()
