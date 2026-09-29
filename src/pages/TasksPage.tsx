@@ -4,6 +4,7 @@ import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { archiveTask, attachTag, createSubtask, createTask, createTaskReminder, deleteTask, detachTag, generateTaskOccurrences, listProjects, listSubtasks, listTaskTags, listTasks, setSubtaskCompleted, updateTask, updateTaskStatus, type Project, type Subtask, type Tag, type Task, type TaskPriority, type TaskStatus } from '../lib/productivity'
 import { filterTasks, type TaskView } from '../lib/taskFilters'
+import { getUserSettings } from '../lib/tracking'
 import '../styles/taskAcceptance.css'
 
 const columns: { key: TaskStatus; label: string }[] = [
@@ -13,6 +14,9 @@ const columns: { key: TaskStatus; label: string }[] = [
   { key: 'review', label: 'Review' },
   { key: 'done', label: 'Done' },
 ]
+
+const taskViews: TaskView[] = ['all','today','upcoming','overdue','completed']
+const taskPriorities: TaskPriority[] = ['low','medium','high','critical']
 
 function toDateTimeLocal(value: string | null) {
   if (!value) return ''
@@ -30,6 +34,7 @@ export function TasksPage() {
   const [error, setError] = useState('')
   const [showForm, setShowForm] = useState(false)
   const [view, setView] = useState<TaskView>('all')
+  const [defaultPriority, setDefaultPriority] = useState<TaskPriority>('medium')
   const [search, setSearch] = useState('')
   const [priorityFilter, setPriorityFilter] = useState<'all' | TaskPriority>('all')
   const [projectFilter, setProjectFilter] = useState('all')
@@ -52,6 +57,18 @@ export function TasksPage() {
   }
 
   useEffect(() => { void refresh() }, [])
+
+  useEffect(() => {
+    if (!session?.user.id) return
+    void getUserSettings(session.user.id).then(settings => {
+      const preferredView = settings.default_task_view as TaskView
+      const preferredPriority = settings.default_priority as TaskPriority
+      if (taskViews.includes(preferredView)) setView(preferredView)
+      if (taskPriorities.includes(preferredPriority)) setDefaultPriority(preferredPriority)
+    }).catch(() => {
+      // Keep safe UI defaults when preferences cannot be loaded.
+    })
+  }, [session?.user.id])
 
   useEffect(() => {
     const createRequested = searchParams.get('create') === '1'
@@ -195,7 +212,7 @@ export function TasksPage() {
         user_id: session.user.id,
         title: String(data.get('title') || '').trim(),
         description: String(data.get('description') || '').trim() || null,
-        priority: String(data.get('priority') || 'medium') as TaskPriority,
+        priority: String(data.get('priority') || defaultPriority) as TaskPriority,
         project_id: String(data.get('project_id') || '') || null,
         due_at: dueValue ? new Date(dueValue).toISOString() : null,
         estimate_minutes: String(data.get('estimate_minutes') || '') ? Number(data.get('estimate_minutes')) : null,
@@ -223,7 +240,7 @@ export function TasksPage() {
     </div>
 
     {error && <div className="error-banner">{error}</div>}
-    <div className="task-view-tabs">{(['all','today','upcoming','overdue','completed'] as TaskView[]).map(item => <button key={item} className={view===item?'active':''} onClick={() => setView(item)}>{item[0].toUpperCase()+item.slice(1)}</button>)}</div>
+    <div className="task-view-tabs">{taskViews.map(item => <button key={item} className={view===item?'active':''} onClick={() => setView(item)}>{item[0].toUpperCase()+item.slice(1)}</button>)}</div>
     <div className="task-filter-bar">
       <label className="task-search"><Search size={16}/><input value={search} onChange={event => setSearch(event.target.value)} placeholder="Search tasks, descriptions or projects…"/></label>
       <select value={priorityFilter} onChange={event => setPriorityFilter(event.target.value as 'all' | TaskPriority)}><option value="all">All priorities</option><option value="critical">Critical</option><option value="high">High</option><option value="medium">Medium</option><option value="low">Low</option></select>
@@ -235,7 +252,7 @@ export function TasksPage() {
       <div className="panel-header"><div><h2>Create task</h2><p>Recurring tasks remain templates so each occurrence can be tracked separately.</p></div><button className="icon-button" onClick={() => setShowForm(false)}><X size={18}/></button></div>
       <form className="task-form" onSubmit={(event) => { event.preventDefault(); void handleCreate(event.currentTarget) }}>
         <label>Title<input name="title" required autoFocus /></label>
-        <label>Priority<select name="priority" defaultValue="medium"><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>
+        <label>Priority<select name="priority" defaultValue={defaultPriority} key={defaultPriority}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>
         <label>Project<select name="project_id" defaultValue=""><option value="">No project</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
         <label>Due date<input type="datetime-local" name="due_at" /></label>
         <label>Estimate (minutes)<input type="number" min="0" name="estimate_minutes" /></label>
