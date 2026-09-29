@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Archive, Bell, CalendarClock, Check, Plus, Repeat2, Save, Search, Tag as TagIcon, Trash2, X } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { archiveTask, attachTag, createSubtask, createTask, createTaskReminder, deleteTask, detachTag, generateTaskOccurrences, listProjects, listSubtasks, listTaskTags, listTasks, setSubtaskCompleted, updateTask, updateTaskStatus, type Project, type Subtask, type Tag, type Task, type TaskPriority, type TaskStatus } from '../lib/productivity'
 import { filterTasks, type TaskView } from '../lib/taskFilters'
@@ -22,6 +23,7 @@ function toDateTimeLocal(value: string | null) {
 
 export function TasksPage() {
   const { session } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [tasks, setTasks] = useState<Task[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [loading, setLoading] = useState(true)
@@ -50,6 +52,22 @@ export function TasksPage() {
   }
 
   useEffect(() => { void refresh() }, [])
+
+  useEffect(() => {
+    const createRequested = searchParams.get('create') === '1'
+    const openId = searchParams.get('open')
+    if (createRequested) setShowForm(true)
+    if (openId && tasks.length) {
+      const match = tasks.find(task => task.id === openId)
+      if (match) void openTask(match)
+    }
+    if (createRequested || openId) {
+      const next = new URLSearchParams(searchParams)
+      next.delete('create')
+      next.delete('open')
+      setSearchParams(next, { replace: true })
+    }
+  }, [tasks, searchParams, setSearchParams])
 
   const visibleTasks = useMemo(() => {
     const query = search.trim().toLowerCase()
