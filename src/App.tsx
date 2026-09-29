@@ -13,6 +13,7 @@ import { CalendarPage } from './pages/CalendarPage'
 import { AnalyticsPage } from './pages/AnalyticsPage'
 import { NotesPage } from './pages/NotesPage'
 import { SettingsPage } from './pages/SettingsPage'
+import { RecurringPage } from './pages/RecurringPage'
 
 export default function App() {
   return <AuthProvider><HashRouter><Routes>
@@ -21,6 +22,7 @@ export default function App() {
     <Route element={<ProtectedRoute><AppLayout/></ProtectedRoute>}>
       <Route index element={<DashboardPage/>}/>
       <Route path="tasks" element={<TasksPage/>}/>
+      <Route path="recurring" element={<RecurringPage/>}/>
       <Route path="projects" element={<ProjectsPage/>}/>
       <Route path="calendar" element={<CalendarPage/>}/>
       <Route path="focus" element={<FocusPage/>}/>
