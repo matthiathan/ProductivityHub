@@ -1,4 +1,4 @@
-import { BrowserRouter, Navigate, Route, Routes } from 'react-router-dom'
+import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from './components/AppLayout'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AuthProvider } from './contexts/AuthContext'
@@ -15,7 +15,7 @@ import { NotesPage } from './pages/NotesPage'
 import { SettingsPage } from './pages/SettingsPage'
 
 export default function App() {
-  return <AuthProvider><BrowserRouter><Routes>
+  return <AuthProvider><HashRouter><Routes>
     <Route path="/login" element={<LoginPage/>}/>
     <Route path="/reset-password" element={<ResetPasswordPage/>}/>
     <Route element={<ProtectedRoute><AppLayout/></ProtectedRoute>}>
@@ -30,5 +30,5 @@ export default function App() {
       <Route path="settings" element={<SettingsPage/>}/>
     </Route>
     <Route path="*" element={<Navigate to="/" replace/>}/>
-  </Routes></BrowserRouter></AuthProvider>
+  </Routes></HashRouter></AuthProvider>
 }
