@@ -58,6 +58,16 @@ export type CreateTaskInput = {
   recurrence_timezone?: string | null
 }
 
+export type UpdateTaskInput = {
+  title?: string
+  description?: string | null
+  priority?: TaskPriority
+  project_id?: string | null
+  due_at?: string | null
+  estimate_minutes?: number | null
+  notes?: string | null
+}
+
 function requireClient() {
   if (!supabase) throw new Error('Supabase is not configured.')
   return supabase
@@ -111,6 +121,13 @@ export async function listTasks() {
 export async function createTask(input: CreateTaskInput) {
   const client = requireClient()
   const { data, error } = await client.from('tasks').insert(input).select('*, projects(id,name)').single()
+  if (error) throw error
+  return data as Task
+}
+
+export async function updateTask(id: string, input: UpdateTaskInput) {
+  const client = requireClient()
+  const { data, error } = await client.from('tasks').update(input).eq('id', id).select('*, projects(id,name)').single()
   if (error) throw error
   return data as Task
 }
