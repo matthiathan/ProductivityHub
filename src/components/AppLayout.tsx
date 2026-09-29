@@ -3,6 +3,7 @@ import { useEffect, useMemo, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { listNotifications, markAllNotificationsRead, markNotificationRead, refreshNotifications, type Notification } from '../lib/notifications'
+import '../styles/notificationAutomation.css'
 
 const nav = [
   ['/', 'Overview', LayoutDashboard], ['/tasks', 'My Tasks', CheckSquare2], ['/projects', 'Projects', FolderKanban], ['/calendar', 'Calendar', CalendarDays], ['/focus', 'Time Tracking', Clock3], ['/analytics', 'Analytics', BarChart3], ['/goals', 'Goals', Goal], ['/notes', 'Notes', FileText], ['/settings', 'Settings', Settings],
