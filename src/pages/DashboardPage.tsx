@@ -56,12 +56,12 @@ export function DashboardPage() {
   return <div className="dashboard-page">
     <header className="page-heading">
       <div><p className="eyebrow">{today}</p><h1>Good morning</h1><p className="muted">Your personal productivity command centre.</p></div>
-      <button className="primary-button compact" onClick={() => navigate('/tasks')}><Plus size={15}/> New Task</button>
+      <button className="primary-button compact" onClick={() => navigate('/tasks?create=1')}><Plus size={15}/> New Task</button>
     </header>
     {error && <div className="error-banner">{error}</div>}
 
     <div className="dashboard-quick-actions">
-      <button className="quick-action-button" onClick={() => navigate('/tasks')}><Plus size={15}/> New task</button>
+      <button className="quick-action-button" onClick={() => navigate('/tasks?create=1')}><Plus size={15}/> New task</button>
       <button className="quick-action-button" onClick={() => navigate('/recurring')}><Repeat2 size={15}/> Recurring schedules</button>
       <button className="quick-action-button" onClick={() => navigate('/focus')}><Clock3 size={15}/> Start focus</button>
       <button className="quick-action-button" onClick={() => navigate('/notes')}><FileText size={15}/> Open notes</button>
@@ -92,7 +92,7 @@ export function DashboardPage() {
 
       <article className="panel task-panel">
         <div className="panel-header"><div><h2>My To-Do</h2><p>Priority work requiring attention</p></div><button className="text-button" onClick={() => navigate('/tasks')}>View all</button></div>
-        <div className="task-list">{priorities.map((task) => <div className="task-row" key={task.id}><button className="task-check" aria-label={`Open ${task.title}`} onClick={() => navigate('/tasks')}/><div className="task-copy"><strong>{task.title}</strong><span>{task.due_at ? `Due ${new Date(task.due_at).toLocaleString('en-ZA', { dateStyle:'medium', timeStyle:'short' })}` : 'No due date'}</span></div><span className={`priority priority-${task.priority}`}>{task.priority}</span></div>)}{!priorities.length && <div className="empty-state">No open tasks.</div>}</div>
+        <div className="task-list">{priorities.map((task) => <div className="task-row" key={task.id}><button className="task-check" aria-label={`Open ${task.title}`} onClick={() => navigate(`/tasks?open=${encodeURIComponent(task.id)}`)}/><div className="task-copy"><strong>{task.title}</strong><span>{task.due_at ? `Due ${new Date(task.due_at).toLocaleString('en-ZA', { dateStyle:'medium', timeStyle:'short' })}` : 'No due date'}</span></div><span className={`priority priority-${task.priority}`}>{task.priority}</span></div>)}{!priorities.length && <div className="empty-state">No open tasks.</div>}</div>
       </article>
 
       <article className="panel focus-panel">
@@ -105,7 +105,7 @@ export function DashboardPage() {
 
       <article className="panel wide-panel dashboard-goals">
         <div className="panel-header"><div><h2>Active Goals</h2><p>Progress across your current targets</p></div><button className="text-button" onClick={() => navigate('/goals')}>Manage goals</button></div>
-        <div className="goal-summary-list">{data?.goals.slice(0,4).map((goal) => <div className="goal-summary" key={goal.id}><div><strong>{goal.name}</strong><span>{goal.progress_percent}%</span></div><div className="progress-track"><span style={{ width:`${goal.progress_percent}%` }}/></div></div>)}{data && !data.goals.length && <div className="empty-state">No active goals yet.</div>}</div>
+        <div className="goal-summary-list">{data?.goals.slice(0,4).map((goal) => <button className="goal-summary" key={goal.id} onClick={() => navigate(`/goals?open=${encodeURIComponent(goal.id)}`)}><div><strong>{goal.name}</strong><span>{goal.progress_percent}%</span></div><div className="progress-track"><span style={{ width:`${goal.progress_percent}%` }}/></div></button>)}{data && !data.goals.length && <div className="empty-state">No active goals yet.</div>}</div>
       </article>
     </section>
   </div>
