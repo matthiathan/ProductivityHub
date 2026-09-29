@@ -13,7 +13,7 @@ function requireClient() { if (!supabase) throw new Error('Supabase is not confi
 export async function listCalendarItems() {
   const client = requireClient()
   const [tasks, projects, goals] = await Promise.all([
-    client.from('tasks').select('id,title,due_at,status').eq('is_recurring', false).not('due_at', 'is', null),
+    client.from('tasks').select('id,title,due_at,status').eq('is_recurring', false).is('archived_at', null).not('due_at', 'is', null),
     client.from('projects').select('id,name,target_date,status').not('target_date', 'is', null),
     client.from('goals').select('id,name,target_date,status').not('target_date', 'is', null),
   ])

@@ -30,7 +30,7 @@ export async function getDashboardAnalytics(userId: string) {
   last7.setHours(0, 0, 0, 0)
 
   const [tasksResult, focusResult, entriesResult, projectsResult, goals, settings] = await Promise.all([
-    client.from('tasks').select('id,status,due_at,completed_at,created_at').eq('is_recurring', false),
+    client.from('tasks').select('id,status,due_at,completed_at,created_at').eq('is_recurring', false).is('archived_at', null),
     client.from('focus_sessions').select('started_at,duration_minutes').not('ended_at', 'is', null).gte('started_at', weekStart.toISOString()),
     client.from('time_entries').select('entry_date,duration_minutes,category').gte('entry_date', isoDate(weekStart)),
     client.from('projects').select('id,status').eq('status', 'active'),
