@@ -29,9 +29,9 @@ export async function globalSearch(rawQuery: string): Promise<GlobalSearchResult
   for (const response of [tasks, projects, goals, notes]) if (response.error) throw response.error
 
   return [
-    ...(tasks.data ?? []).map(row => ({ id: row.id, type: 'task' as const, title: row.title, subtitle: `Task · ${row.status.replaceAll('_', ' ')}`, route: '/tasks' })),
-    ...(projects.data ?? []).map(row => ({ id: row.id, type: 'project' as const, title: row.name, subtitle: `Project · ${row.status.replaceAll('_', ' ')}`, route: '/projects' })),
-    ...(goals.data ?? []).map(row => ({ id: row.id, type: 'goal' as const, title: row.name, subtitle: `Goal · ${row.status}`, route: '/goals' })),
-    ...(notes.data ?? []).map(row => ({ id: row.id, type: 'note' as const, title: row.title, subtitle: 'Note', route: '/notes' })),
+    ...(tasks.data ?? []).map(row => ({ id: row.id, type: 'task' as const, title: row.title, subtitle: `Task · ${row.status.replaceAll('_', ' ')}`, route: `/tasks?open=${encodeURIComponent(row.id)}` })),
+    ...(projects.data ?? []).map(row => ({ id: row.id, type: 'project' as const, title: row.name, subtitle: `Project · ${row.status.replaceAll('_', ' ')}`, route: `/projects?open=${encodeURIComponent(row.id)}` })),
+    ...(goals.data ?? []).map(row => ({ id: row.id, type: 'goal' as const, title: row.name, subtitle: `Goal · ${row.status}`, route: `/goals?open=${encodeURIComponent(row.id)}` })),
+    ...(notes.data ?? []).map(row => ({ id: row.id, type: 'note' as const, title: row.title, subtitle: 'Note', route: `/notes?open=${encodeURIComponent(row.id)}` })),
   ].slice(0, 12)
 }
