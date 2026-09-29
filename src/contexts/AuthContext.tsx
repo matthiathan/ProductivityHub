@@ -12,8 +12,6 @@ type AuthContextValue = {
   updatePassword: (password: string) => Promise<string | null>
 }
 
-const AuthContext = createContext<AuthContextValue | undefined>(undefined)
-
 function authErrorMessage(error: unknown) {
   if (error instanceof TypeError && /fetch/i.test(error.message)) {
     return `Cannot reach the Supabase authentication service at ${supabaseApiHost}. Check DNS, firewall, VPN, antivirus web protection, or browser privacy extensions.`
