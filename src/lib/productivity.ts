@@ -82,150 +82,122 @@ function requireClient() {
 
 export async function listProjects() {
   const client = requireClient()
-  const { data, error } = await client
-    .from('projects')
-    .select('*')
-    .order('created_at', { ascending: false })
+  const { data, error } = await client.from('projects').select('*').order('created_at', { ascending: false })
   if (error) throw error
   return (data ?? []) as Project[]
 }
 
-export async function createProject(input: {
-  user_id: string
-  name: string
-  description?: string | null
-  status?: ProjectStatus
-  start_date?: string | null
-  target_date?: string | null
-}) {
-  const client = requireClient()
-  const { data, error } = await client.from('projects').insert(input).select('*').single()
+export async function createProject(input: { user_id: string; name: string; description?: string | null; status?: ProjectStatus; start_date?: string | null; target_date?: string | null }) {
+  const { data, error } = await requireClient().from('projects').insert(input).select('*').single()
   if (error) throw error
   return data as Project
 }
 
 export async function updateProject(id: string, input: UpdateProjectInput) {
-  const client = requireClient()
-  const { data, error } = await client.from('projects').update(input).eq('id', id).select('*').single()
+  const { data, error } = await requireClient().from('projects').update(input).eq('id', id).select('*').single()
   if (error) throw error
   return data as Project
 }
 
 export async function updateProjectStatus(id: string, status: ProjectStatus) {
-  const client = requireClient()
   const changes: Record<string, unknown> = { status }
   if (status === 'completed') changes.completed_at = new Date().toISOString()
   if (status === 'archived') changes.archived_at = new Date().toISOString()
   if (status !== 'completed') changes.completed_at = null
   if (status !== 'archived') changes.archived_at = null
-  const { data, error } = await client.from('projects').update(changes).eq('id', id).select('*').single()
+  const { data, error } = await requireClient().from('projects').update(changes).eq('id', id).select('*').single()
   if (error) throw error
   return data as Project
 }
 
 export async function listTasks() {
-  const client = requireClient()
-  const { data, error } = await client
-    .from('tasks')
-    .select('*, projects(id,name)')
-    .eq('is_recurring', false)
-    .is('archived_at', null)
-    .order('created_at', { ascending: false })
+  const { data, error } = await requireClient().from('tasks').select('*, projects(id,name)').eq('is_recurring', false).is('archived_at', null).order('created_at', { ascending: false })
+  if (error) throw error
+  return (data ?? []) as Task[]
+}
+
+export async function listRecurringTemplates(includeArchived = false) {
+  let query = requireClient().from('tasks').select('*, projects(id,name)').eq('is_recurring', true).is('recurring_template_id', null).order('created_at', { ascending: false })
+  if (!includeArchived) query = query.is('archived_at', null)
+  const { data, error } = await query
   if (error) throw error
   return (data ?? []) as Task[]
 }
 
 export async function createTask(input: CreateTaskInput) {
-  const client = requireClient()
-  const { data, error } = await client.from('tasks').insert(input).select('*, projects(id,name)').single()
+  const { data, error } = await requireClient().from('tasks').insert(input).select('*, projects(id,name)').single()
   if (error) throw error
   return data as Task
 }
 
 export async function updateTask(id: string, input: UpdateTaskInput) {
-  const client = requireClient()
-  const { data, error } = await client.from('tasks').update(input).eq('id', id).select('*, projects(id,name)').single()
+  const { data, error } = await requireClient().from('tasks').update(input).eq('id', id).select('*, projects(id,name)').single()
   if (error) throw error
   return data as Task
 }
 
 export async function archiveTask(id: string) {
-  const client = requireClient()
-  const { data, error } = await client.from('tasks').update({ archived_at: new Date().toISOString() }).eq('id', id).select('*, projects(id,name)').single()
+  const { data, error } = await requireClient().from('tasks').update({ archived_at: new Date().toISOString() }).eq('id', id).select('*, projects(id,name)').single()
+  if (error) throw error
+  return data as Task
+}
+
+export async function restoreTask(id: string) {
+  const { data, error } = await requireClient().from('tasks').update({ archived_at: null }).eq('id', id).select('*, projects(id,name)').single()
   if (error) throw error
   return data as Task
 }
 
 export async function deleteTask(id: string) {
-  const client = requireClient()
-  const { error } = await client.from('tasks').delete().eq('id', id)
+  const { error } = await requireClient().from('tasks').delete().eq('id', id)
   if (error) throw error
 }
 
 export async function createTaskReminder(userId: string, taskId: string, remindAt: string, message?: string | null) {
-  const client = requireClient()
-  const { data, error } = await client.from('reminders').insert({ user_id: userId, task_id: taskId, remind_at: remindAt, message: message || null }).select('*').single()
+  const { data, error } = await requireClient().from('reminders').insert({ user_id: userId, task_id: taskId, remind_at: remindAt, message: message || null }).select('*').single()
   if (error) throw error
   return data
 }
 
 export async function updateTaskStatus(id: string, status: TaskStatus) {
-  const client = requireClient()
   const changes: Record<string, unknown> = { status }
   if (status === 'in_progress') changes.started_at = new Date().toISOString()
   if (status === 'done') changes.completed_at = new Date().toISOString()
   if (status !== 'done') changes.completed_at = null
-  const { data, error } = await client.from('tasks').update(changes).eq('id', id).select('*, projects(id,name)').single()
+  const { data, error } = await requireClient().from('tasks').update(changes).eq('id', id).select('*, projects(id,name)').single()
   if (error) throw error
   return data as Task
 }
 
 export async function generateTaskOccurrences(templateId: string, until?: string) {
-  const client = requireClient()
-  const { data, error } = await client.rpc('generate_task_occurrences', {
-    p_template_id: templateId,
-    ...(until ? { p_until: until } : {}),
-  })
+  const { data, error } = await requireClient().rpc('generate_task_occurrences', { p_template_id: templateId, ...(until ? { p_until: until } : {}) })
   if (error) throw error
   return Number(data ?? 0)
 }
 
-export type Subtask = {
-  id: string
-  user_id: string
-  task_id: string
-  title: string
-  is_completed: boolean
-  position: number
-  completed_at: string | null
-}
-
+export type Subtask = { id: string; user_id: string; task_id: string; title: string; is_completed: boolean; position: number; completed_at: string | null }
 export type Tag = { id: string; user_id: string; name: string; color: string | null }
 
 export async function listSubtasks(taskId: string) {
-  const client = requireClient()
-  const { data, error } = await client.from('subtasks').select('*').eq('task_id', taskId).order('position').order('created_at')
+  const { data, error } = await requireClient().from('subtasks').select('*').eq('task_id', taskId).order('position').order('created_at')
   if (error) throw error
   return (data ?? []) as Subtask[]
 }
 
 export async function createSubtask(userId: string, taskId: string, title: string) {
-  const client = requireClient()
-  const { data, error } = await client.from('subtasks').insert({ user_id: userId, task_id: taskId, title }).select('*').single()
+  const { data, error } = await requireClient().from('subtasks').insert({ user_id: userId, task_id: taskId, title }).select('*').single()
   if (error) throw error
   return data as Subtask
 }
 
 export async function setSubtaskCompleted(id: string, completed: boolean) {
-  const client = requireClient()
-  const { data, error } = await client.from('subtasks').update({ is_completed: completed, completed_at: completed ? new Date().toISOString() : null }).eq('id', id).select('*').single()
+  const { data, error } = await requireClient().from('subtasks').update({ is_completed: completed, completed_at: completed ? new Date().toISOString() : null }).eq('id', id).select('*').single()
   if (error) throw error
   return data as Subtask
 }
 
 export async function listTaskTags(taskId: string) {
-  const client = requireClient()
-  const { data, error } = await client.from('task_tags').select('tags(id,user_id,name,color)').eq('task_id', taskId)
+  const { data, error } = await requireClient().from('task_tags').select('tags(id,user_id,name,color)').eq('task_id', taskId)
   if (error) throw error
   return (data ?? []).map((row: any) => row.tags).filter(Boolean) as Tag[]
 }
@@ -250,7 +222,6 @@ export async function attachTag(userId: string, taskId: string, rawName: string)
 }
 
 export async function detachTag(taskId: string, tagId: string) {
-  const client = requireClient()
-  const { error } = await client.from('task_tags').delete().eq('task_id', taskId).eq('tag_id', tagId)
+  const { error } = await requireClient().from('task_tags').delete().eq('task_id', taskId).eq('tag_id', tagId)
   if (error) throw error
 }
