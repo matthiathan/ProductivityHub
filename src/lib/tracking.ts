@@ -41,6 +41,20 @@ function requireClient() {
   return supabase
 }
 
+async function recomputeTaskActualMinutes(taskId: string | null | undefined) {
+  if (!taskId) return
+  const client = requireClient()
+  const [sessions, entries] = await Promise.all([
+    client.from('focus_sessions').select('duration_minutes').eq('task_id', taskId).not('ended_at', 'is', null),
+    client.from('time_entries').select('duration_minutes').eq('task_id', taskId),
+  ])
+  if (sessions.error) throw sessions.error
+  if (entries.error) throw entries.error
+  const total = [...(sessions.data ?? []), ...(entries.data ?? [])].reduce((sum, row) => sum + Number(row.duration_minutes ?? 0), 0)
+  const { error } = await client.from('tasks').update({ actual_minutes: total }).eq('id', taskId)
+  if (error) throw error
+}
+
 export async function getActiveFocusSession() {
   const client = requireClient()
   const { data, error } = await client
@@ -53,7 +67,7 @@ export async function getActiveFocusSession() {
   return (data ?? null) as FocusSession | null
 }
 
-export async function listFocusSessions(limit = 20) {
+export async function listFocusSessions(limit = 50) {
   const client = requireClient()
   const { data, error } = await client
     .from('focus_sessions')
@@ -87,7 +101,35 @@ export async function stopFocusSession(id: string) {
     .select('*')
     .single()
   if (error) throw error
-  return data as FocusSession
+  const session = data as FocusSession
+  await recomputeTaskActualMinutes(session.task_id)
+  return session
+}
+
+export async function updateFocusSession(id: string, changes: { duration_minutes?: number; title?: string | null; category?: FocusCategory; task_id?: string | null; project_id?: string | null }) {
+  const client = requireClient()
+  const existing = await client.from('focus_sessions').select('*').eq('id', id).single()
+  if (existing.error) throw existing.error
+  const row = existing.data as FocusSession
+  const patch: Record<string, unknown> = { ...changes }
+  if (changes.duration_minutes != null && row.ended_at) {
+    patch.ended_at = new Date(new Date(row.started_at).getTime() + Math.max(1, changes.duration_minutes) * 60000).toISOString()
+    delete patch.duration_minutes
+  }
+  const { data, error } = await client.from('focus_sessions').update(patch).eq('id', id).select('*').single()
+  if (error) throw error
+  const updated = data as FocusSession
+  await Promise.all([recomputeTaskActualMinutes(row.task_id), recomputeTaskActualMinutes(updated.task_id)])
+  return updated
+}
+
+export async function deleteFocusSession(id: string) {
+  const client = requireClient()
+  const existing = await client.from('focus_sessions').select('task_id').eq('id', id).single()
+  if (existing.error) throw existing.error
+  const { error } = await client.from('focus_sessions').delete().eq('id', id)
+  if (error) throw error
+  await recomputeTaskActualMinutes(existing.data.task_id)
 }
 
 export async function addManualTimeEntry(input: {
@@ -102,10 +144,34 @@ export async function addManualTimeEntry(input: {
   const client = requireClient()
   const { data, error } = await client.from('time_entries').insert(input).select('*').single()
   if (error) throw error
-  return data as TimeEntry
+  const entry = data as TimeEntry
+  await recomputeTaskActualMinutes(entry.task_id)
+  return entry
 }
 
-export async function listTimeEntries(limit = 20) {
+export async function updateManualTimeEntry(id: string, changes: Partial<Pick<TimeEntry, 'task_id' | 'project_id' | 'category' | 'description' | 'entry_date' | 'duration_minutes'>>) {
+  const client = requireClient()
+  const existing = await client.from('time_entries').select('*').eq('id', id).single()
+  if (existing.error) throw existing.error
+  const before = existing.data as TimeEntry
+  const safeChanges = { ...changes, ...(changes.duration_minutes != null ? { duration_minutes: Math.max(1, changes.duration_minutes) } : {}) }
+  const { data, error } = await client.from('time_entries').update(safeChanges).eq('id', id).select('*').single()
+  if (error) throw error
+  const updated = data as TimeEntry
+  await Promise.all([recomputeTaskActualMinutes(before.task_id), recomputeTaskActualMinutes(updated.task_id)])
+  return updated
+}
+
+export async function deleteManualTimeEntry(id: string) {
+  const client = requireClient()
+  const existing = await client.from('time_entries').select('task_id').eq('id', id).single()
+  if (existing.error) throw existing.error
+  const { error } = await client.from('time_entries').delete().eq('id', id)
+  if (error) throw error
+  await recomputeTaskActualMinutes(existing.data.task_id)
+}
+
+export async function listTimeEntries(limit = 50) {
   const client = requireClient()
   const { data, error } = await client
     .from('time_entries')
