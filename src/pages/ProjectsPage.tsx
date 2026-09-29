@@ -1,5 +1,6 @@
 import { useEffect, useMemo, useState } from 'react'
 import { Pencil, Plus, Search, X } from 'lucide-react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { createProject, listProjects, listTasks, updateProject, updateProjectStatus, type Project, type ProjectStatus, type Task } from '../lib/productivity'
 import { calculateProjectMetrics } from '../lib/projectMetrics'
@@ -12,6 +13,7 @@ type StatusFilter = 'all' | ProjectStatus
 
 export function ProjectsPage() {
   const { session } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [projects, setProjects] = useState<Project[]>([])
   const [tasks, setTasks] = useState<Task[]>([])
   const [error, setError] = useState('')
@@ -21,6 +23,15 @@ export function ProjectsPage() {
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all')
 
   useEffect(() => { void Promise.all([listProjects(), listTasks()]).then(([projectRows, taskRows]) => { setProjects(projectRows); setTasks(taskRows) }).catch(err => setError(err.message)) }, [])
+  useEffect(() => {
+    const openId = searchParams.get('open')
+    if (!openId || !projects.length) return
+    const match = projects.find(project => project.id === openId)
+    if (match) setSelected(match)
+    const next = new URLSearchParams(searchParams)
+    next.delete('open')
+    setSearchParams(next, { replace: true })
+  }, [projects, searchParams, setSearchParams])
 
   const visibleProjects = useMemo(() => {
     const query = search.trim().toLowerCase()
