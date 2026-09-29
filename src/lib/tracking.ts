@@ -34,6 +34,12 @@ export type UserSettings = {
   daily_focus_target_minutes: number
   weekly_focus_target_minutes: number
   productivity_weights: Record<string, number>
+  weekly_task_target: number
+  default_priority: 'low' | 'medium' | 'high' | 'critical'
+  default_task_view: 'all' | 'today' | 'upcoming' | 'overdue' | 'completed'
+  week_starts_on: number
+  working_day_start: string
+  working_day_end: string
 }
 
 function requireClient() {
