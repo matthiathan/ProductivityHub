@@ -113,6 +113,7 @@ export async function listTasks() {
     .from('tasks')
     .select('*, projects(id,name)')
     .eq('is_recurring', false)
+    .is('archived_at', null)
     .order('created_at', { ascending: false })
   if (error) throw error
   return (data ?? []) as Task[]
