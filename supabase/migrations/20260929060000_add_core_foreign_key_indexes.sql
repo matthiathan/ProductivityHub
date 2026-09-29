@@ -1,0 +1,10 @@
+create index if not exists reminders_project_idx on public.reminders(project_id);
+create index if not exists reminders_task_idx on public.reminders(task_id);
+create index if not exists subtasks_task_idx on public.subtasks(task_id);
+create index if not exists subtasks_user_idx on public.subtasks(user_id);
+create index if not exists task_occurrences_task_idx on public.task_occurrences(task_id);
+create index if not exists task_occurrences_template_idx on public.task_occurrences(template_task_id);
+create index if not exists task_status_events_user_idx on public.task_status_events(user_id);
+create index if not exists task_tags_tag_idx on public.task_tags(tag_id);
+create index if not exists task_tags_user_idx on public.task_tags(user_id);
+create index if not exists tasks_recurring_template_idx on public.tasks(recurring_template_id);
