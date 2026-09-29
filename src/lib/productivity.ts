@@ -37,6 +37,7 @@ export type Task = {
   occurrence_key: string | null
   started_at: string | null
   completed_at: string | null
+  archived_at: string | null
   created_at: string
   updated_at: string
   projects?: Pick<Project, 'id' | 'name'> | null
@@ -112,6 +113,26 @@ export async function createTask(input: CreateTaskInput) {
   const { data, error } = await client.from('tasks').insert(input).select('*, projects(id,name)').single()
   if (error) throw error
   return data as Task
+}
+
+export async function archiveTask(id: string) {
+  const client = requireClient()
+  const { data, error } = await client.from('tasks').update({ archived_at: new Date().toISOString() }).eq('id', id).select('*, projects(id,name)').single()
+  if (error) throw error
+  return data as Task
+}
+
+export async function deleteTask(id: string) {
+  const client = requireClient()
+  const { error } = await client.from('tasks').delete().eq('id', id)
+  if (error) throw error
+}
+
+export async function createTaskReminder(userId: string, taskId: string, remindAt: string, message?: string | null) {
+  const client = requireClient()
+  const { data, error } = await client.from('reminders').insert({ user_id: userId, task_id: taskId, remind_at: remindAt, message: message || null }).select('*').single()
+  if (error) throw error
+  return data
 }
 
 export async function updateTaskStatus(id: string, status: TaskStatus) {

@@ -1,7 +1,9 @@
 import { useEffect, useMemo, useState } from 'react'
-import { CalendarClock, Check, Plus, Repeat2, Tag as TagIcon, X } from 'lucide-react'
+import { Archive, Bell, CalendarClock, Check, Plus, Repeat2, Tag as TagIcon, Trash2, X } from 'lucide-react'
 import { useAuth } from '../contexts/AuthContext'
-import { attachTag, createSubtask, createTask, detachTag, generateTaskOccurrences, listProjects, listSubtasks, listTaskTags, listTasks, setSubtaskCompleted, updateTaskStatus, type Project, type Subtask, type Tag, type Task, type TaskPriority, type TaskStatus } from '../lib/productivity'
+import { archiveTask, attachTag, createSubtask, createTask, createTaskReminder, deleteTask, detachTag, generateTaskOccurrences, listProjects, listSubtasks, listTaskTags, listTasks, setSubtaskCompleted, updateTaskStatus, type Project, type Subtask, type Tag, type Task, type TaskPriority, type TaskStatus } from '../lib/productivity'
+import { filterTasks, type TaskView } from '../lib/taskFilters'
+import '../styles/taskAcceptance.css'
 
 const columns: { key: TaskStatus; label: string }[] = [
   { key: 'backlog', label: 'Backlog' },
@@ -18,6 +20,7 @@ export function TasksPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
   const [showForm, setShowForm] = useState(false)
+  const [view, setView] = useState<TaskView>('all')
   const [selectedTask, setSelectedTask] = useState<Task | null>(null)
   const [subtasks, setSubtasks] = useState<Subtask[]>([])
   const [tags, setTags] = useState<Tag[]>([])
@@ -38,8 +41,8 @@ export function TasksPage() {
 
   useEffect(() => { void refresh() }, [])
 
-  const counts = useMemo(() => Object.fromEntries(columns.map(({ key }) => [key, tasks.filter(task => task.status === key).length])), [tasks])
-
+  const visibleTasks = useMemo(() => filterTasks(tasks, view), [tasks, view])
+  const counts = useMemo(() => Object.fromEntries(columns.map(({ key }) => [key, visibleTasks.filter(task => task.status === key).length])), [visibleTasks])
 
   async function openTask(task: Task) {
     setSelectedTask(task)
@@ -80,6 +83,31 @@ export function TasksPage() {
       await detachTag(selectedTask.id, tag.id)
       setTags(current => current.filter(item => item.id !== tag.id))
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not remove tag.') }
+  }
+
+  async function archiveSelectedTask() {
+    if (!selectedTask) return
+    try {
+      await archiveTask(selectedTask.id)
+      setTasks(current => current.map(item => item.id === selectedTask.id ? { ...item, archived_at: new Date().toISOString() } : item))
+      setSelectedTask(null)
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not archive task.') }
+  }
+
+  async function deleteSelectedTask() {
+    if (!selectedTask || !window.confirm(`Delete “${selectedTask.title}” permanently?`)) return
+    try {
+      await deleteTask(selectedTask.id)
+      setTasks(current => current.filter(item => item.id !== selectedTask.id))
+      setSelectedTask(null)
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not delete task.') }
+  }
+
+  async function addReminder(remindAt: string, message: string) {
+    if (!selectedTask || !session?.user.id || !remindAt) return
+    try {
+      await createTaskReminder(session.user.id, selectedTask.id, new Date(remindAt).toISOString(), message.trim() || null)
+    } catch (err) { setError(err instanceof Error ? err.message : 'Could not create reminder.') }
   }
 
   async function moveTask(task: Task, status: TaskStatus) {
@@ -138,6 +166,7 @@ export function TasksPage() {
     </div>
 
     {error && <div className="error-banner">{error}</div>}
+    <div className="task-view-tabs">{(['all','today','upcoming','overdue','completed'] as TaskView[]).map(item => <button key={item} className={view===item?'active':''} onClick={() => setView(item)}>{item[0].toUpperCase()+item.slice(1)}</button>)}</div>
     {showForm && <div className="panel create-panel">
       <div className="panel-header"><div><h2>Create task</h2><p>Recurring tasks remain templates so each occurrence can be tracked separately.</p></div><button className="icon-button" onClick={() => setShowForm(false)}><X size={18}/></button></div>
       <form className="task-form" onSubmit={(event) => { event.preventDefault(); void handleCreate(event.currentTarget) }}>
@@ -156,14 +185,14 @@ export function TasksPage() {
       {columns.map(column => <section className="kanban-column" key={column.key}>
         <div className="kanban-header"><span>{column.label}</span><strong>{counts[column.key] ?? 0}</strong></div>
         <div className="kanban-stack">
-          {tasks.filter(task => task.status === column.key).map(task => <article className="task-card" key={task.id}>
+          {visibleTasks.filter(task => task.status === column.key).map(task => <article className="task-card" key={task.id}>
             <div className="task-card-top"><span className={`priority priority-${task.priority}`}>{task.priority}</span>{task.is_recurring && <Repeat2 size={15} className="accent-icon"/>}</div>
             <h3>{task.title}</h3>
             {task.description && <p>{task.description}</p>}
             <div className="task-meta">{task.projects?.name && <span>{task.projects.name}</span>}{task.due_at && <span><CalendarClock size={13}/>{new Date(task.due_at).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })}</span>}</div>
             <div className="task-card-actions"><select aria-label={`Move ${task.title}`} value={task.status} onChange={event => void moveTask(task, event.target.value as TaskStatus)}>{columns.map(option => <option value={option.key} key={option.key}>{option.label}</option>)}</select><button className="secondary-button compact-button" onClick={() => void openTask(task)}>Details</button></div>
           </article>)}
-          {tasks.every(task => task.status !== column.key) && <div className="column-empty">No tasks</div>}
+          {visibleTasks.every(task => task.status !== column.key) && <div className="column-empty">No tasks</div>}
         </div>
       </section>)}
     </div>}
@@ -173,7 +202,8 @@ export function TasksPage() {
       {selectedTask.description && <p className="drawer-description">{selectedTask.description}</p>}
       <section className="drawer-section"><h3>Checklist</h3><div className="subtask-list">{subtasks.map(subtask => <button className={subtask.is_completed ? 'subtask completed' : 'subtask'} key={subtask.id} onClick={() => void toggleSubtask(subtask)}><span className="subtask-check">{subtask.is_completed && <Check size={12}/>}</span><span>{subtask.title}</span></button>)}</div><form className="inline-form" onSubmit={(event) => { event.preventDefault(); const input=event.currentTarget.elements.namedItem('subtask') as HTMLInputElement; void addSubtask(input.value).then(() => { input.value='' }) }}><input name="subtask" placeholder="Add checklist item…"/><button className="secondary-button">Add</button></form></section>
       <section className="drawer-section"><h3><TagIcon size={15}/> Tags</h3><div className="tag-list">{tags.map(tag => <button className="tag-chip" key={tag.id} onClick={() => void removeTag(tag)}>{tag.name}<X size={12}/></button>)}</div><form className="inline-form" onSubmit={(event) => { event.preventDefault(); const input=event.currentTarget.elements.namedItem('tag') as HTMLInputElement; void addTag(input.value).then(() => { input.value='' }) }}><input name="tag" placeholder="Add tag…"/><button className="secondary-button">Add</button></form></section>
-      <section className="drawer-section detail-grid"><div><span>Status</span><strong>{columns.find(c => c.key===selectedTask.status)?.label}</strong></div><div><span>Estimate</span><strong>{selectedTask.estimate_minutes ? `${selectedTask.estimate_minutes} min` : '—'}</strong></div><div><span>Due</span><strong>{selectedTask.due_at ? new Date(selectedTask.due_at).toLocaleString() : '—'}</strong></div><div><span>Project</span><strong>{selectedTask.projects?.name || 'None'}</strong></div></section>
+      <section className="drawer-section"><h3><Bell size={15}/> Reminder</h3><form className="reminder-form" onSubmit={(event) => { event.preventDefault(); const when=(event.currentTarget.elements.namedItem('remind_at') as HTMLInputElement); const msg=(event.currentTarget.elements.namedItem('message') as HTMLInputElement); void addReminder(when.value,msg.value).then(() => { when.value=''; msg.value='' }) }}><input name="remind_at" type="datetime-local" required/><input name="message" placeholder="Optional reminder message"/><button className="secondary-button">Set reminder</button></form></section>
+      <section className="drawer-section detail-grid"><div><span>Status</span><strong>{columns.find(c => c.key===selectedTask.status)?.label}</strong></div><div><span>Estimate</span><strong>{selectedTask.estimate_minutes ? `${selectedTask.estimate_minutes} min` : '—'}</strong></div><div><span>Due</span><strong>{selectedTask.due_at ? new Date(selectedTask.due_at).toLocaleString() : '—'}</strong></div><div><span>Project</span><strong>{selectedTask.projects?.name || 'None'}</strong></div></section><section className="drawer-section destructive-actions"><button className="secondary-button" onClick={() => void archiveSelectedTask()}><Archive size={15}/> Archive</button><button className="text-button danger" onClick={() => void deleteSelectedTask()}><Trash2 size={15}/> Delete permanently</button></section>
     </aside></div>}
   </>
 }
