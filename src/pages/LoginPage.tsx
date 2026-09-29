@@ -1,6 +1,7 @@
 import { type FormEvent, useState } from 'react'
 import { Navigate, useLocation } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
+import { supabaseApiHost, testSupabaseConnection } from '../lib/supabase'
 
 export function LoginPage() {
   const { configured, session, signIn, requestPasswordReset } = useAuth()
@@ -9,6 +10,8 @@ export function LoginPage() {
   const [error, setError] = useState<string | null>(null)
   const [submitting, setSubmitting] = useState(false)
   const [resetSent, setResetSent] = useState(false)
+  const [connectionMessage, setConnectionMessage] = useState<string | null>(null)
+  const [testingConnection, setTestingConnection] = useState(false)
   const location = useLocation()
 
   if (session) return <Navigate to="/" replace />
@@ -16,6 +19,7 @@ export function LoginPage() {
   async function submit(event: FormEvent) {
     event.preventDefault()
     setSubmitting(true)
+    setConnectionMessage(null)
     setError(await signIn(email, password))
     setSubmitting(false)
   }
@@ -34,6 +38,14 @@ export function LoginPage() {
     else setResetSent(true)
   }
 
+  async function testConnection() {
+    setError(null)
+    setTestingConnection(true)
+    const result = await testSupabaseConnection()
+    setConnectionMessage(result.message)
+    setTestingConnection(false)
+  }
+
   return (
     <main className="login-shell">
       <section className="login-card">
@@ -47,9 +59,12 @@ export function LoginPage() {
           <label>Password<input type="password" value={password} onChange={(e) => setPassword(e.target.value)} required /></label>
           {error && <p className="form-error">{error}</p>}
           {resetSent && <p className="form-success">Password reset email sent.</p>}
+          {connectionMessage && <p className={connectionMessage.startsWith('Connected') ? 'form-success' : 'form-error'}>{connectionMessage}</p>}
           <button className="primary-button" disabled={submitting || !configured}>{submitting ? 'Working…' : 'Sign in'}</button>
           <button type="button" className="text-button" onClick={sendReset} disabled={submitting || !configured}>Forgot password?</button>
+          <button type="button" className="text-button" onClick={testConnection} disabled={testingConnection || !configured}>{testingConnection ? 'Testing connection…' : 'Test Supabase connection'}</button>
         </form>
+        <small>API: {supabaseApiHost}</small>
         <small>{location.state ? 'Please sign in to continue.' : 'Persistent sessions are enabled on trusted devices.'}</small>
       </section>
     </main>
