@@ -1,22 +1,28 @@
+import { lazy, Suspense } from 'react'
 import { HashRouter, Navigate, Route, Routes } from 'react-router-dom'
 import { AppLayout } from './components/AppLayout'
 import { ProtectedRoute } from './components/ProtectedRoute'
 import { AuthProvider } from './contexts/AuthContext'
-import { DashboardPage } from './pages/DashboardPage'
-import { LoginPage } from './pages/LoginPage'
-import { TasksPage } from './pages/TasksPage'
-import { ProjectsPage } from './pages/ProjectsPage'
-import { ResetPasswordPage } from './pages/ResetPasswordPage'
-import { FocusPage } from './pages/FocusPage'
-import { GoalsPage } from './pages/GoalsPage'
-import { CalendarPage } from './pages/CalendarPage'
-import { AnalyticsPage } from './pages/AnalyticsPage'
-import { NotesPage } from './pages/NotesPage'
-import { SettingsPage } from './pages/SettingsPage'
-import { RecurringPage } from './pages/RecurringPage'
+
+const DashboardPage = lazy(() => import('./pages/DashboardPage').then((module) => ({ default: module.DashboardPage })))
+const LoginPage = lazy(() => import('./pages/LoginPage').then((module) => ({ default: module.LoginPage })))
+const TasksPage = lazy(() => import('./pages/TasksPage').then((module) => ({ default: module.TasksPage })))
+const ProjectsPage = lazy(() => import('./pages/ProjectsPage').then((module) => ({ default: module.ProjectsPage })))
+const ResetPasswordPage = lazy(() => import('./pages/ResetPasswordPage').then((module) => ({ default: module.ResetPasswordPage })))
+const FocusPage = lazy(() => import('./pages/FocusPage').then((module) => ({ default: module.FocusPage })))
+const GoalsPage = lazy(() => import('./pages/GoalsPage').then((module) => ({ default: module.GoalsPage })))
+const CalendarPage = lazy(() => import('./pages/CalendarPage').then((module) => ({ default: module.CalendarPage })))
+const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage').then((module) => ({ default: module.AnalyticsPage })))
+const NotesPage = lazy(() => import('./pages/NotesPage').then((module) => ({ default: module.NotesPage })))
+const SettingsPage = lazy(() => import('./pages/SettingsPage').then((module) => ({ default: module.SettingsPage })))
+const RecurringPage = lazy(() => import('./pages/RecurringPage').then((module) => ({ default: module.RecurringPage })))
+
+function RouteFallback() {
+  return <div className="loading-screen">Loading workspace…</div>
+}
 
 export default function App() {
-  return <AuthProvider><HashRouter><Routes>
+  return <AuthProvider><HashRouter><Suspense fallback={<RouteFallback/>}><Routes>
     <Route path="/login" element={<LoginPage/>}/>
     <Route path="/reset-password" element={<ResetPasswordPage/>}/>
     <Route element={<ProtectedRoute><AppLayout/></ProtectedRoute>}>
@@ -32,5 +38,5 @@ export default function App() {
       <Route path="settings" element={<SettingsPage/>}/>
     </Route>
     <Route path="*" element={<Navigate to="/" replace/>}/>
-  </Routes></HashRouter></AuthProvider>
+  </Routes></Suspense></HashRouter></AuthProvider>
 }
