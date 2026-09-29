@@ -1,5 +1,6 @@
 import { Archive, CheckCircle2, Edit3, Flag, Plus, Search, Target, Trash2, X } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
+import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
 import { createGoal, deleteGoal, listGoalsWithProgress, recordGoalProgress, setGoalStatus, updateGoal, type GoalStatus, type GoalType, type GoalWithProgress } from '../lib/goals'
 import { listProjects, type Project } from '../lib/productivity'
@@ -9,6 +10,7 @@ const statuses: Array<'all' | GoalStatus> = ['all', 'active', 'completed', 'arch
 
 export function GoalsPage() {
   const { session } = useAuth()
+  const [searchParams, setSearchParams] = useSearchParams()
   const [goals, setGoals] = useState<GoalWithProgress[]>([])
   const [projects, setProjects] = useState<Project[]>([])
   const [showForm, setShowForm] = useState(false)
@@ -29,6 +31,18 @@ export function GoalsPage() {
     } catch (err) { setError(err instanceof Error ? err.message : 'Could not load goals.') }
   }
   useEffect(() => { void reload() }, [session?.user.id])
+  useEffect(() => {
+    const openId = searchParams.get('open')
+    if (!openId || !goals.length) return
+    const match = goals.find(goal => goal.id === openId)
+    if (match) {
+      setSelected(match)
+      setStatusFilter('all')
+    }
+    const next = new URLSearchParams(searchParams)
+    next.delete('open')
+    setSearchParams(next, { replace: true })
+  }, [goals, searchParams, setSearchParams])
 
   const visibleGoals = useMemo(() => goals.filter(goal => {
     const matchesStatus = statusFilter === 'all' || goal.status === statusFilter
