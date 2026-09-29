@@ -1,6 +1,6 @@
 import { createContext, useContext, useEffect, useMemo, useState } from 'react'
 import type { Session } from '@supabase/supabase-js'
-import { isSupabaseConfigured, supabase } from '../lib/supabase'
+import { isSupabaseConfigured, supabase, supabaseApiHost } from '../lib/supabase'
 
 type AuthContextValue = {
   session: Session | null
@@ -10,6 +10,16 @@ type AuthContextValue = {
   signOut: () => Promise<void>
   requestPasswordReset: (email: string) => Promise<string | null>
   updatePassword: (password: string) => Promise<string | null>
+}
+
+const AuthContext = createContext<AuthContextValue | undefined>(undefined)
+
+function authErrorMessage(error: unknown) {
+  if (error instanceof TypeError && /fetch/i.test(error.message)) {
+    return `Cannot reach the Supabase authentication service at ${supabaseApiHost}. Check DNS, firewall, VPN, antivirus web protection, or browser privacy extensions.`
+  }
+  if (error instanceof Error) return error.message
+  return 'Unexpected authentication error.'
 }
 
 const AuthContext = createContext<AuthContextValue | undefined>(undefined)
@@ -27,7 +37,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     void supabase.auth.getSession().then(({ data }) => {
       setSession(data.session)
       setLoading(false)
-    })
+    }).catch(() => setLoading(false))
 
     const { data } = supabase.auth.onAuthStateChange((_event, nextSession) => {
       setSession(nextSession)
@@ -43,22 +53,39 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     configured: isSupabaseConfigured,
     async signIn(email, password) {
       if (!supabase) return 'Supabase has not been configured yet.'
-      const { error } = await supabase.auth.signInWithPassword({ email, password })
-      return error?.message ?? null
+      try {
+        const { error } = await supabase.auth.signInWithPassword({ email, password })
+        return error?.message ?? null
+      } catch (error) {
+        return authErrorMessage(error)
+      }
     },
     async signOut() {
-      if (supabase) await supabase.auth.signOut()
+      if (!supabase) return
+      try {
+        await supabase.auth.signOut()
+      } catch {
+        // Session state will be retried on the next load.
+      }
     },
     async requestPasswordReset(email) {
       if (!supabase) return 'Supabase has not been configured yet.'
-      const redirectTo = `${window.location.origin}/#/reset-password`
-      const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
-      return error?.message ?? null
+      try {
+        const redirectTo = `${window.location.origin}/#/reset-password`
+        const { error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo })
+        return error?.message ?? null
+      } catch (error) {
+        return authErrorMessage(error)
+      }
     },
     async updatePassword(password) {
       if (!supabase) return 'Supabase has not been configured yet.'
-      const { error } = await supabase.auth.updateUser({ password })
-      return error?.message ?? null
+      try {
+        const { error } = await supabase.auth.updateUser({ password })
+        return error?.message ?? null
+      } catch (error) {
+        return authErrorMessage(error)
+      }
     },
   }), [loading, session])
 
