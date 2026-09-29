@@ -68,6 +68,13 @@ export type UpdateTaskInput = {
   notes?: string | null
 }
 
+export type UpdateProjectInput = {
+  name?: string
+  description?: string | null
+  start_date?: string | null
+  target_date?: string | null
+}
+
 function requireClient() {
   if (!supabase) throw new Error('Supabase is not configured.')
   return supabase
@@ -97,11 +104,20 @@ export async function createProject(input: {
   return data as Project
 }
 
+export async function updateProject(id: string, input: UpdateProjectInput) {
+  const client = requireClient()
+  const { data, error } = await client.from('projects').update(input).eq('id', id).select('*').single()
+  if (error) throw error
+  return data as Project
+}
+
 export async function updateProjectStatus(id: string, status: ProjectStatus) {
   const client = requireClient()
   const changes: Record<string, unknown> = { status }
   if (status === 'completed') changes.completed_at = new Date().toISOString()
   if (status === 'archived') changes.archived_at = new Date().toISOString()
+  if (status !== 'completed') changes.completed_at = null
+  if (status !== 'archived') changes.archived_at = null
   const { data, error } = await client.from('projects').update(changes).eq('id', id).select('*').single()
   if (error) throw error
   return data as Project
