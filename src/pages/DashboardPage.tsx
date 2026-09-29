@@ -1,4 +1,4 @@
-import { Activity, CheckCircle2, Clock3, FolderKanban, Target, TrendingUp } from 'lucide-react'
+import { Activity, CheckCircle2, Clock3, FileText, FolderKanban, Plus, Repeat2, Target, TrendingUp } from 'lucide-react'
 import { useEffect, useMemo, useState } from 'react'
 import { useNavigate } from 'react-router-dom'
 import { Area, AreaChart, CartesianGrid, ResponsiveContainer, Tooltip, XAxis, YAxis } from 'recharts'
@@ -56,9 +56,16 @@ export function DashboardPage() {
   return <div className="dashboard-page">
     <header className="page-heading">
       <div><p className="eyebrow">{today}</p><h1>Good morning</h1><p className="muted">Your personal productivity command centre.</p></div>
-      <button className="primary-button compact" onClick={() => navigate('/tasks')}>+ New Task</button>
+      <button className="primary-button compact" onClick={() => navigate('/tasks')}><Plus size={15}/> New Task</button>
     </header>
     {error && <div className="error-banner">{error}</div>}
+
+    <div className="dashboard-quick-actions">
+      <button className="quick-action-button" onClick={() => navigate('/tasks')}><Plus size={15}/> New task</button>
+      <button className="quick-action-button" onClick={() => navigate('/recurring')}><Repeat2 size={15}/> Recurring schedules</button>
+      <button className="quick-action-button" onClick={() => navigate('/focus')}><Clock3 size={15}/> Start focus</button>
+      <button className="quick-action-button" onClick={() => navigate('/notes')}><FileText size={15}/> Open notes</button>
+    </div>
 
     <section className="metric-grid">
       <Metric icon={<TrendingUp />} label="Productivity Score" value={data ? String(data.score) : '—'} delta="Weighted from six visible metrics" />
