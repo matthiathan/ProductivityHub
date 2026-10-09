@@ -4,6 +4,7 @@ type FilterableTask = {
   status: string
   due_at: string | null
   archived_at?: string | null
+  recurring_template_id?: string | null
 }
 
 function localDateKey(value: Date) {
@@ -15,7 +16,10 @@ function localDateKey(value: Date) {
 
 export function filterTasks<T extends FilterableTask>(tasks: T[], view: TaskView, now = new Date()) {
   const visible = tasks.filter((task) => !task.archived_at)
-  if (view === 'all') return visible
+  if (view === 'all') {
+    const today = localDateKey(now)
+    return visible.filter(task => !task.recurring_template_id || !task.due_at || task.status === 'done' || localDateKey(new Date(task.due_at)) <= today)
+  }
   if (view === 'completed') return visible.filter((task) => task.status === 'done')
 
   const today = localDateKey(now)
