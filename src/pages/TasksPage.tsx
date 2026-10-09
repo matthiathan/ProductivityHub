@@ -206,7 +206,12 @@ export function TasksPage() {
       setError('Recurring tasks need a first due date/time.')
       return
     }
-    const rule = recurrence === 'none' ? null : { frequency: recurrence, interval: recurrenceInterval }
+    const endDate = String(data.get('recurrence_end_date') || '')
+    if (endDate && dueValue && endDate < dueValue.slice(0, 10)) {
+      setError('The recurrence end date must be on or after the first due date.')
+      return
+    }
+    const rule = recurrence === 'none' ? null : { frequency: recurrence, interval: recurrenceInterval, ...(endDate ? { end_date: endDate } : {}) }
     try {
       const created = await createTask({
         user_id: session.user.id,
@@ -256,7 +261,7 @@ export function TasksPage() {
         <label>Project<select name="project_id" defaultValue=""><option value="">No project</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
         <label>Due date<input type="datetime-local" name="due_at" /></label>
         <label>Estimate (minutes)<input type="number" min="0" name="estimate_minutes" /></label>
-        <label>Recurrence<select name="recurrence" defaultValue="none"><option value="none">Not recurring</option><option value="daily">Days</option><option value="weekly">Weeks</option><option value="monthly">Months</option></select></label><label>Repeat every<input type="number" min="1" defaultValue="1" name="recurrence_interval"/><span className="field-help">Use 2 + Weeks for every 2 weeks, etc.</span></label>
+        <label>Recurrence<select name="recurrence" defaultValue="none"><option value="none">Not recurring</option><option value="daily">Days</option><option value="weekdays">Weekdays (Monday–Friday)</option><option value="weekly">Weeks</option><option value="monthly">Months</option></select></label><label>Repeat every<input type="number" min="1" defaultValue="1" name="recurrence_interval"/><span className="field-help">For example: 2 + Weeks repeats fortnightly. Weekdays always repeats Monday–Friday.</span></label><label>End date (optional)<input type="date" name="recurrence_end_date"/><span className="field-help">Leave blank to repeat indefinitely.</span></label>
         <label className="form-span">Description<textarea name="description" rows={3}/></label>
         <div className="form-span form-actions"><button className="primary-button" type="submit">Create task</button><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>Cancel</button></div>
       </form>
