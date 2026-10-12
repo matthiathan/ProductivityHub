@@ -1,6 +1,6 @@
 import { supabase } from './supabase'
 
-export type TaskStatus = 'backlog' | 'todo' | 'in_progress' | 'review' | 'done'
+export type TaskStatus = 'backlog' | 'ongoing' | 'todo' | 'in_progress' | 'review' | 'done'
 export type TaskPriority = 'low' | 'medium' | 'high' | 'critical'
 export type ProjectStatus = 'planned' | 'active' | 'on_hold' | 'completed' | 'archived'
 
