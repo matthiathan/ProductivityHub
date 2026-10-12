@@ -15,7 +15,6 @@ const CalendarPage = lazy(() => import('./pages/CalendarPage').then((module) => 
 const AnalyticsPage = lazy(() => import('./pages/AnalyticsPage').then((module) => ({ default: module.AnalyticsPage })))
 const NotesPage = lazy(() => import('./pages/NotesPage').then((module) => ({ default: module.NotesPage })))
 const SettingsPage = lazy(() => import('./pages/SettingsPage').then((module) => ({ default: module.SettingsPage })))
-const RecurringPage = lazy(() => import('./pages/RecurringPage').then((module) => ({ default: module.RecurringPage })))
 
 function RouteFallback() {
   return <div className="loading-screen">Loading workspace…</div>
@@ -28,7 +27,7 @@ export default function App() {
     <Route element={<ProtectedRoute><AppLayout/></ProtectedRoute>}>
       <Route index element={<DashboardPage/>}/>
       <Route path="tasks" element={<TasksPage/>}/>
-      <Route path="recurring" element={<RecurringPage/>}/>
+      <Route path="recurring" element={<Navigate to="/tasks" replace/>}/>
       <Route path="projects" element={<ProjectsPage/>}/>
       <Route path="calendar" element={<CalendarPage/>}/>
       <Route path="focus" element={<FocusPage/>}/>
