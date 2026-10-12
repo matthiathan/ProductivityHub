@@ -1,4 +1,4 @@
-import { BarChart3, Bell, CalendarDays, CheckSquare2, Clock3, FileText, FolderKanban, Goal, LayoutDashboard, LogOut, Repeat2, Search, Settings } from 'lucide-react'
+import { BarChart3, Bell, CalendarDays, CheckSquare2, Clock3, FileText, FolderKanban, Goal, LayoutDashboard, LogOut, Search, Settings } from 'lucide-react'
 import { useEffect, useMemo, useRef, useState } from 'react'
 import { NavLink, Outlet, useNavigate } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
@@ -8,7 +8,7 @@ import '../styles/notificationAutomation.css'
 import '../styles/finalPolish.css'
 
 const nav = [
-  ['/', 'Overview', LayoutDashboard], ['/tasks', 'My Tasks', CheckSquare2], ['/recurring', 'Recurring', Repeat2], ['/projects', 'Projects', FolderKanban], ['/calendar', 'Calendar', CalendarDays], ['/focus', 'Time Tracking', Clock3], ['/analytics', 'Analytics', BarChart3], ['/goals', 'Goals', Goal], ['/notes', 'Notes', FileText], ['/settings', 'Settings', Settings],
+  ['/', 'Overview', LayoutDashboard], ['/tasks', 'My Tasks', CheckSquare2], ['/projects', 'Projects', FolderKanban], ['/calendar', 'Calendar', CalendarDays], ['/focus', 'Time Tracking', Clock3], ['/analytics', 'Analytics', BarChart3], ['/goals', 'Goals', Goal], ['/notes', 'Notes', FileText], ['/settings', 'Settings', Settings],
 ] as const
 
 export function AppLayout() {
