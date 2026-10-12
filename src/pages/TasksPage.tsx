@@ -1,14 +1,15 @@
 import { useEffect, useMemo, useState } from 'react'
-import { Archive, Bell, CalendarClock, Check, Plus, Repeat2, Save, Search, Tag as TagIcon, Trash2, X } from 'lucide-react'
+import { Archive, Bell, CalendarClock, Check, Plus, Save, Search, Tag as TagIcon, Trash2, X } from 'lucide-react'
 import { useSearchParams } from 'react-router-dom'
 import { useAuth } from '../contexts/AuthContext'
-import { archiveTask, attachTag, createSubtask, createTask, createTaskReminder, deleteTask, detachTag, generateTaskOccurrences, listProjects, listSubtasks, listTaskTags, listTasks, setSubtaskCompleted, updateTask, updateTaskStatus, type Project, type Subtask, type Tag, type Task, type TaskPriority, type TaskStatus } from '../lib/productivity'
+import { archiveTask, attachTag, createSubtask, createTask, createTaskReminder, deleteTask, detachTag, listProjects, listSubtasks, listTaskTags, listTasks, setSubtaskCompleted, updateTask, updateTaskStatus, type Project, type Subtask, type Tag, type Task, type TaskPriority, type TaskStatus } from '../lib/productivity'
 import { filterTasks, type TaskView } from '../lib/taskFilters'
 import { getUserSettings } from '../lib/tracking'
 import '../styles/taskAcceptance.css'
 
 const columns: { key: TaskStatus; label: string }[] = [
   { key: 'backlog', label: 'Backlog' },
+  { key: 'ongoing', label: 'Ongoing' },
   { key: 'todo', label: 'To Do' },
   { key: 'in_progress', label: 'In Progress' },
   { key: 'review', label: 'Review' },
@@ -199,19 +200,7 @@ export function TasksPage() {
   async function handleCreate(form: HTMLFormElement) {
     if (!session?.user.id) return
     const data = new FormData(form)
-    const recurrence = String(data.get('recurrence') || 'none')
-    const recurrenceInterval = Math.max(1, Number(data.get('recurrence_interval') || 1))
     const dueValue = String(data.get('due_at') || '')
-    if (recurrence !== 'none' && !dueValue) {
-      setError('Recurring tasks need a first due date/time.')
-      return
-    }
-    const endDate = String(data.get('recurrence_end_date') || '')
-    if (endDate && dueValue && endDate < dueValue.slice(0, 10)) {
-      setError('The recurrence end date must be on or after the first due date.')
-      return
-    }
-    const rule = recurrence === 'none' ? null : { frequency: recurrence, interval: recurrenceInterval, ...(endDate ? { end_date: endDate } : {}) }
     try {
       const created = await createTask({
         user_id: session.user.id,
@@ -220,17 +209,9 @@ export function TasksPage() {
         priority: String(data.get('priority') || defaultPriority) as TaskPriority,
         project_id: String(data.get('project_id') || '') || null,
         due_at: dueValue ? new Date(dueValue).toISOString() : null,
-        estimate_minutes: String(data.get('estimate_minutes') || '') ? Number(data.get('estimate_minutes')) : null,
-        is_recurring: Boolean(rule),
-        recurrence_rule: rule,
-        recurrence_timezone: rule ? Intl.DateTimeFormat().resolvedOptions().timeZone : null,
+        estimate_minutes: String(data.get('estimate_minutes') || '') ? Number(data.get('estimate_minutes')) : null
       })
-      if (created.is_recurring) {
-        await generateTaskOccurrences(created.id)
-        setTasks(await listTasks())
-      } else {
-        setTasks(current => [created, ...current])
-      }
+      setTasks(current => [created, ...current])
       setShowForm(false)
       form.reset()
     } catch (err) {
@@ -240,7 +221,7 @@ export function TasksPage() {
 
   return <>
     <div className="page-heading">
-      <div><div className="eyebrow">WORKFLOW</div><h1>My Tasks</h1><p className="muted">Move work through the five-stage workflow and keep every transition measurable.</p></div>
+      <div><div className="eyebrow">WORKFLOW</div><h1>My Tasks</h1><p className="muted">Move work through the six-stage workflow and keep every transition measurable.</p></div>
       <button className="primary-button" onClick={() => setShowForm(true)}><Plus size={17}/> New task</button>
     </div>
 
@@ -254,14 +235,14 @@ export function TasksPage() {
     </div>
 
     {showForm && <div className="panel create-panel">
-      <div className="panel-header"><div><h2>Create task</h2><p>Recurring tasks remain templates so each occurrence can be tracked separately.</p></div><button className="icon-button" onClick={() => setShowForm(false)}><X size={18}/></button></div>
+      <div className="panel-header"><div><h2>Create task</h2><p>Use Ongoing for continuous responsibilities that do not need to repeat.</p></div><button className="icon-button" onClick={() => setShowForm(false)}><X size={18}/></button></div>
       <form className="task-form" onSubmit={(event) => { event.preventDefault(); void handleCreate(event.currentTarget) }}>
         <label>Title<input name="title" required autoFocus /></label>
         <label>Priority<select name="priority" defaultValue={defaultPriority} key={defaultPriority}><option value="low">Low</option><option value="medium">Medium</option><option value="high">High</option><option value="critical">Critical</option></select></label>
         <label>Project<select name="project_id" defaultValue=""><option value="">No project</option>{projects.map(project => <option key={project.id} value={project.id}>{project.name}</option>)}</select></label>
         <label>Due date<input type="datetime-local" name="due_at" /></label>
         <label>Estimate (minutes)<input type="number" min="0" name="estimate_minutes" /></label>
-        <label>Recurrence<select name="recurrence" defaultValue="none"><option value="none">Not recurring</option><option value="daily">Days</option><option value="weekdays">Weekdays (Monday–Friday)</option><option value="weekly">Weeks</option><option value="monthly">Months</option></select></label><label>Repeat every<input type="number" min="1" defaultValue="1" name="recurrence_interval"/><span className="field-help">For example: 2 + Weeks repeats fortnightly. Weekdays always repeats Monday–Friday.</span></label><label>End date (optional)<input type="date" name="recurrence_end_date"/><span className="field-help">Leave blank to repeat indefinitely.</span></label>
+
         <label className="form-span">Description<textarea name="description" rows={3}/></label>
         <div className="form-span form-actions"><button className="primary-button" type="submit">Create task</button><button type="button" className="secondary-button" onClick={() => setShowForm(false)}>Cancel</button></div>
       </form>
@@ -272,7 +253,7 @@ export function TasksPage() {
         <div className="kanban-header"><span>{column.label}</span><strong>{counts[column.key] ?? 0}</strong></div>
         <div className="kanban-stack">
           {visibleTasks.filter(task => task.status === column.key).map(task => <article className="task-card" key={task.id}>
-            <div className="task-card-top"><span className={`priority priority-${task.priority}`}>{task.priority}</span>{task.is_recurring && <Repeat2 size={15} className="accent-icon"/>}</div>
+            <div className="task-card-top"><span className={`priority priority-${task.priority}`}>{task.priority}</span></div>
             <h3>{task.title}</h3>
             {task.description && <p>{task.description}</p>}
             <div className="task-meta">{task.projects?.name && <span>{task.projects.name}</span>}{task.due_at && <span><CalendarClock size={13}/>{new Date(task.due_at).toLocaleString([], { month:'short', day:'numeric', hour:'2-digit', minute:'2-digit' })}</span>}</div>
